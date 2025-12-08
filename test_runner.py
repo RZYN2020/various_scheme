@@ -13,7 +13,12 @@ INTERPRETER_CONFIG = {
     "typescript": {
         "compile_command": "cd ./ss_ts && npx tsc",
         "run_command": "node ./ss_ts/dist/scheme.js"
+    },
+    "go": {
+        "compile_command": None,
+        "run_command": "go run ./ss_go/scheme.go"
     }
+
 }
 
 TEST_CONFIG = {
@@ -59,7 +64,7 @@ NC='\033[0m'
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run tests for Scheme interpreter")
-    parser.add_argument("-i", "--interpreter", choices=["python", "c", "typescript"], default="python", help="Interpreter to use")
+    parser.add_argument("-i", "--interpreter", choices=["python", "c", "typescript", "go"], default="python", help="Interpreter to use")
     args = parser.parse_args()
     
     config = INTERPRETER_CONFIG[args.interpreter]
