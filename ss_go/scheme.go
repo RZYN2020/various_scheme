@@ -48,7 +48,11 @@ func (n SNumber) repr() string {
 }
 
 func (b SBool) repr() string {
-	return fmt.Sprintf("%t", b)
+	if b {
+		return "#t"
+	} else {
+		return "#f"
+	}
 }
 
 func (s SLambda) repr() string {
@@ -80,10 +84,10 @@ func (n SList) evaluate(env *Env) (Val, error) {
 		return nil, errors.New("empty list")
 	}
 
-	fun_sym, ok := n[0].(SSym)
+	funSym, ok := n[0].(SSym)
 	var fun SLambda
 	if ok {
-		if string(fun_sym) == "define" {
+		if string(funSym) == "define" {
 			if len(n) != 3 {
 				return nil, errors.New("invalid list")
 			}
@@ -96,13 +100,13 @@ func (n SList) evaluate(env *Env) (Val, error) {
 				return nil, err
 			}
 			env.Define(string(sym), val)
-			return val, nil
+			return nil, nil
 		}
-		fun_special, ok := SpecialForms[string(fun_sym)]
+		funSpecial, ok := SpecialForms[string(funSym)]
 		if ok {
-			return fun_special(n[1:], env)
+			return funSpecial(n[1:], env)
 		} else {
-			fun, ok = env.Resolve(string((fun_sym))).(SLambda)
+			fun, ok = env.Resolve(string((funSym))).(SLambda)
 			if fun == nil {
 				return nil, errors.New("unknown function")
 			}
@@ -269,7 +273,7 @@ func init() {
 		if !ok {
 			return nil, errors.New("lambda() parameter requires list argument")
 		}
-		parameters := []SSym{}
+		var parameters []SSym
 		for _, para := range parametersSlist {
 			sym, ok := para.(SSym)
 			if !ok {
@@ -278,13 +282,8 @@ func init() {
 			parameters = append(parameters, sym)
 		}
 		body := args[1]
-		return SLambda(func(args []Val, env *Env) (Val, error) {
+		return SLambda(func(args []Val, innerEnv *Env) (Val, error) {
 			if len(args) != len(parameters) {
-				//fmt.Println("len of args:", len(args))
-				//fmt.Print("len of parameters:", len(parameters))
-				//for i, para := range parameters {
-				//fmt.Println("args[", i, "]", para)
-				//}
 				return nil, errors.New(" argument length mismatch")
 			}
 			lambdaEnv := NewEnv(env)
@@ -297,8 +296,8 @@ func init() {
 }
 
 func main() {
-	global_env := NewEnv(nil)
-	global_env.Define("+", SLambda(func(args []Val, env *Env) (Val, error) {
+	globalEnv := NewEnv(nil)
+	globalEnv.Define("+", SLambda(func(args []Val, env *Env) (Val, error) {
 		res := float64(0)
 		for _, arg := range args {
 			num, ok := arg.(SNumber)
@@ -309,7 +308,7 @@ func main() {
 		}
 		return SNumber(res), nil
 	}))
-	global_env.Define("*", SLambda(func(args []Val, env *Env) (Val, error) {
+	globalEnv.Define("*", SLambda(func(args []Val, env *Env) (Val, error) {
 		res := float64(1)
 		for _, arg := range args {
 			num, ok := arg.(SNumber)
@@ -320,7 +319,7 @@ func main() {
 		}
 		return SNumber(res), nil
 	}))
-	global_env.Define("-", SLambda(func(args []Val, env *Env) (Val, error) {
+	globalEnv.Define("-", SLambda(func(args []Val, env *Env) (Val, error) {
 		if len(args) != 2 {
 			return nil, errors.New("-() requires 2 arguments")
 		}
@@ -332,9 +331,9 @@ func main() {
 		if !ok {
 			return nil, errors.New("lambda() parameter requires numeric argument")
 		}
-		return SNumber(num1 * num2), nil
+		return SNumber(num1 - num2), nil
 	}))
-	global_env.Define("/", SLambda(func(args []Val, env *Env) (Val, error) {
+	globalEnv.Define("/", SLambda(func(args []Val, env *Env) (Val, error) {
 		if len(args) != 2 {
 			return nil, errors.New("/() requires 2 arguments")
 		}
@@ -346,9 +345,9 @@ func main() {
 		if !ok {
 			return nil, errors.New("lambda() parameter requires numeric argument")
 		}
-		return SNumber(num1 * num2), nil
+		return SNumber(num1 / num2), nil
 	}))
-	global_env.Define("=", SLambda(func(args []Val, env *Env) (Val, error) {
+	globalEnv.Define("=", SLambda(func(args []Val, env *Env) (Val, error) {
 		if len(args) != 2 {
 			return nil, errors.New("=() requires 2 arguments")
 		}
@@ -358,7 +357,7 @@ func main() {
 			return SBool(false), nil
 		}
 	}))
-	global_env.Define(">", SLambda(func(args []Val, env *Env) (Val, error) {
+	globalEnv.Define(">", SLambda(func(args []Val, env *Env) (Val, error) {
 		if len(args) != 2 {
 			return nil, errors.New(">() requires 2 arguments")
 		}
@@ -372,7 +371,7 @@ func main() {
 		}
 		return SBool(num1 > num2), nil
 	}))
-	global_env.Define("<", SLambda(func(args []Val, env *Env) (Val, error) {
+	globalEnv.Define("<", SLambda(func(args []Val, env *Env) (Val, error) {
 		if len(args) != 2 {
 			return nil, errors.New("<() requires 2 arguments")
 		}
@@ -387,7 +386,7 @@ func main() {
 		return SBool(num1 < num2), nil
 	}))
 
-	global_env.Define("<=", SLambda(func(args []Val, env *Env) (Val, error) {
+	globalEnv.Define("<=", SLambda(func(args []Val, env *Env) (Val, error) {
 		if len(args) != 2 {
 			return nil, errors.New("<=() requires 2 arguments")
 		}
@@ -401,7 +400,7 @@ func main() {
 		}
 		return SBool(num1 <= num2), nil
 	}))
-	global_env.Define(">=", SLambda(func(args []Val, env *Env) (Val, error) {
+	globalEnv.Define(">=", SLambda(func(args []Val, env *Env) (Val, error) {
 		if len(args) != 2 {
 			return nil, errors.New(">=() requires 2 arguments")
 		}
@@ -415,7 +414,7 @@ func main() {
 		}
 		return SBool(num1 >= num2), nil
 	}))
-	global_env.Define("not", SLambda(func(args []Val, env *Env) (Val, error) {
+	globalEnv.Define("not", SLambda(func(args []Val, env *Env) (Val, error) {
 		if len(args) != 1 {
 			return nil, errors.New("not() requires 1 argument")
 		}
@@ -423,17 +422,17 @@ func main() {
 		if !ok {
 			return nil, errors.New("not() requires true argument")
 		}
-		return bool_, nil
+		return !bool_, nil
 	}))
 
 	if len(os.Args) > 1 {
 		// file mode
 		filename := os.Args[1]
-		fileMode(filename, global_env)
+		fileMode(filename, globalEnv)
 	} else {
 		// repl mode
 		fmt.Println("Welcome to the Scheme REPL (Go version)")
-		replMode(global_env)
+		replMode(globalEnv)
 	}
 }
 
@@ -471,7 +470,7 @@ func fileMode(testFile string, env *Env) {
 		res, err := expr.evaluate(env)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
-		} else {
+		} else if res != nil {
 			fmt.Println(res.repr())
 		}
 	}
@@ -504,7 +503,7 @@ func replMode(env *Env) {
 		res, err := expr.evaluate(env)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
-		} else {
+		} else if res != nil {
 			fmt.Println(res.repr())
 		}
 
