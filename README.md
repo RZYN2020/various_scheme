@@ -11,8 +11,9 @@
 实现进度：
 
 - [x] Python
-- [ ] C
+- [X] C
 - [X] TypeScript
+- [X] Golang
 
 ### IO格式
 
@@ -177,4 +178,5 @@ $$
 2. string
 3. macro
 4. begin
+5. future/promise
 
